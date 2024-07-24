@@ -26,7 +26,7 @@ typedef struct instructionInfo{
 	//pp ( 2 bits), L ( 1 bit), vvvv( 4 bits), W ( 1 bit unused if two byte seq).
 	unsigned short int xopVexInfo;
 
-
+	
 
 
 
@@ -50,10 +50,10 @@ char legacyPrefixFSM(unsigned char* instructionCandidate, instInfo* info);
 
 char isRexPrefix(unsigned char byte);
 
-char getRexB(instInfo info);
-char getRexX(instInfo info);
-char getRexR(instInfo  info);
-char getRexW(instInfo info);
+unsigned char getRexB(instInfo info);
+unsigned char getRexX(instInfo info);
+unsigned char getRexR(instInfo  info);
+unsigned char getRexW(instInfo info);
 
 void setRexByte(instInfo* info, unsigned char rexByte);
 
@@ -68,8 +68,24 @@ char queryVEXTables(unsigned char opByte, unsigned char mapSelect);
 
 char parseXOPVEXSequence(unsigned char isXOP, unsigned char isThreeByte, unsigned char* currentPos, instInfo* info);
 
+
+unsigned char getXOPVEXR(instInfo * info);
+unsigned char getXOPVEXB(instInfo * info);
+
+	
 char secondaryPrefixFSM(unsigned char * currentPos, instInfo* info);
 
+
+
+char getModMod(unsigned char byte);
+char getModReg(unsigned char byte);
+char getModRm(unsigned char byte);
+char parseModRMByte(unsigned char byte, instInfo* info);
+
+unsigned char getSIBScale(unsigned char byte);
+unsigned char getSIBIndex(unsigned char byte);
+unsigned char getSIBBase(unsigned char byte);
+char parseSIBByte(unsigned char byte, instInfo* info);
 
 
 

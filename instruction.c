@@ -91,10 +91,10 @@ char legacyPrefixFSM(unsigned char* instructionCandidate, instInfo* info){
 
 char isRexPrefix(unsigned char byte) {return ((byte & 0xF0) == 0x40);}
 
-char getRexB(instInfo info) {return info.rexInfo & 0x01;}
-char getRexX(instInfo info) {return (info.rexInfo & 0x02) >> 1;}
-char getRexR(instInfo  info) {return (info.rexInfo & 0x04) >> 2;}
-char getRexW(instInfo info) {return (info.rexInfo & 0x08) >> 3;}
+unsigned char getRexB(instInfo info) {return info.rexInfo & 0x01;}
+unsigned char getRexX(instInfo info) {return (info.rexInfo & 0x02) >> 1;}
+unsigned char getRexR(instInfo  info) {return (info.rexInfo & 0x04) >> 2;}
+unsigned char getRexW(instInfo info) {return (info.rexInfo & 0x08) >> 3;}
 
 void setRexByte(instInfo* info, unsigned char rexByte) {info->rexInfo = (rexByte & 0x0F);}
 
@@ -194,6 +194,10 @@ char queryVEXTables(unsigned char opByte, unsigned char mapSelect){
 	return 0;
 
 }
+
+unsigned char getXOPVEXR(instInfo * info){return (info->xopVexInfo & 0x10) >> 4;}
+unsigned char getXOPVEXB(instInfo * info){return (info->xopVexInfo & 0x04) >> 2;}
+
 
 char parseXOPVEXSequence(unsigned char isXOP, unsigned char isThreeByte, unsigned char* currentPos, instInfo* info){
 
@@ -304,6 +308,58 @@ char secondaryPrefixFSM(unsigned char * currentPos, instInfo* info){
 
 
 
+
+
+
+
+}
+
+
+
+
+
+
+unsigned char getModMod(unsigned char byte){return (0xC0 &byte) >> 6; }
+unsigned char getModReg(unsigned char byte){return (0x38 & byte) >> 3;}
+unsigned char getModRm(unsigned char byte){return (0x07 & byte);}
+
+
+char parseModRMByte(unsigned char byte, instInfo* info){
+
+
+	unsigned char modMod = getModMod(byte);
+	unsigned char modReg = getModReg(byte);
+	unsigned char modRm = getModRm(byte);
+	
+	unsigned char regExtension = getRexR(info) || !getXOPVEXR(info);
+	unsigned char fullReg = (regExtension << 3) || modReg;
+	
+	unsigned rmExtension = getRexB(info) || !getXOPVEXB(info);
+	unsigned char fullRm = (rmExtension << 3) || modRm;
+
+
+
+
+}
+
+
+unsigned char getSIBScale(unsigned char byte){return (0xC0 &byte) >> 6; }
+unsigned char getSIBIndex(unsigned char byte){return (0x38 & byte) >> 3;}
+unsigned char getSIBBase(unsigned char byte){return (0x07 & byte);}
+
+
+char parseSIBByte(unsigned char byte, instInfo* info){
+
+
+	unsigned char sibScale = getSIBScale(byte);
+	unsigned char sibIndex = getSIBIndex(byte);
+	unsigned char sibBase = getSIBBase(byte);
+	
+	unsigned char indexExtension = getRexX(info);
+	unsigned char fullIndex = (indexExtension << 3) || sibIndex;
+	
+	unsigned baseExtension = getRexB(info);
+	unsigned char fullBase = (baseExtension << 3) || sibBase;
 
 
 
