@@ -15,6 +15,7 @@
 #define repezPre 0xF3//repe or repz
 #define repnezPre 0xF2 // repne or repnz
 
+
 typedef struct instructionInfo{
 
 	//lsb to msb: opSizePre(1 bit), addrSizePre(1 bit), segmentPre(7 values: 3 bits), lockPre( 1 bit), repPre(3 values: 2 bits) 
@@ -34,6 +35,15 @@ typedef struct instructionInfo{
 
 }instInfo;
 
+
+typedef struct instructionReq{
+
+	unsigned char register
+	
+	char* mnemonic
+
+
+}instReq;
 char getOpSizeInfo(instInfo info);
 char getAddrSizeInfo(instInfo info);
 char getSegmentInfo(instInfo  info);
