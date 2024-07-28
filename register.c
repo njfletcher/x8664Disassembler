@@ -76,13 +76,13 @@ void loadRexRegisters(char ** registers){
 	int index = 0;
 	
 	index = getRegisterArrayIndex(4,genPurpose,0);
-	registers[index1] = "SPL";
+	registers[index] = "SPL";
 	index = getRegisterArrayIndex(5,genPurpose,0);
-	registers[index1] = "BPL";
+	registers[index] = "BPL";
 	index = getRegisterArrayIndex(6,genPurpose,0);
-	registers[index1] = "SIL";
+	registers[index] = "SIL";
 	index = getRegisterArrayIndex(7,genPurpose,0);
-	registers[index1] = "DIL";
+	registers[index] = "DIL";
 
 }
 
@@ -91,13 +91,13 @@ void loadNonRexRegisters(char ** registers){
 	int index = 0;
 	
 	index = getRegisterArrayIndex(4,genPurpose,0);
-	registers[index1] = "AH";
+	registers[index] = "AH";
 	index = getRegisterArrayIndex(5,genPurpose,0);
-	registers[index1] = "CH";
+	registers[index] = "CH";
 	index = getRegisterArrayIndex(6,genPurpose,0);
-	registers[index1] = "DH";
+	registers[index] = "DH";
 	index = getRegisterArrayIndex(7,genPurpose,0);
-	registers[index1] = "BH";
+	registers[index] = "BH";
 
 }
 

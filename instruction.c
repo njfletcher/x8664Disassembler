@@ -1,10 +1,10 @@
 #include "instruction.h"
 
-char getOpSizeInfo(instInfo info) {return (info.legPreInfo & 0x01);}
-char getAddrSizeInfo(instInfo info) {return ((info.legPreInfo & 0x02) >> 1);}
-char getSegmentInfo(instInfo info) {return ((info.legPreInfo & 0x1C) >> 2);}
-char getLockInfo(instInfo info) {return ((info.legPreInfo & 0x20) >> 5);}
-char getRepInfo(instInfo info) {return ((info.legPreInfo & 0xC0) >> 6);}
+char getOpSizeInfo(instInfo* info) {return (info->legPreInfo & 0x01);}
+char getAddrSizeInfo(instInfo* info) {return ((info->legPreInfo & 0x02) >> 1);}
+char getSegmentInfo(instInfo* info) {return ((info->legPreInfo & 0x1C) >> 2);}
+char getLockInfo(instInfo* info) {return ((info->legPreInfo & 0x20) >> 5);}
+char getRepInfo(instInfo* info) {return ((info->legPreInfo & 0xC0) >> 6);}
 
 void setOpSizeInfo(instInfo* info, int value) {info->legPreInfo |= (value & 0x01);}
 void setAddrSizeInfo(instInfo* info, int value) {info->legPreInfo |= ((value << 1) & 0x02);}
@@ -91,10 +91,10 @@ char legacyPrefixFSM(unsigned char* instructionCandidate, instInfo* info){
 
 char isRexPrefix(unsigned char byte) {return ((byte & 0xF0) == 0x40);}
 
-unsigned char getRexB(instInfo info) {return info.rexInfo & 0x01;}
-unsigned char getRexX(instInfo info) {return (info.rexInfo & 0x02) >> 1;}
-unsigned char getRexR(instInfo  info) {return (info.rexInfo & 0x04) >> 2;}
-unsigned char getRexW(instInfo info) {return (info.rexInfo & 0x08) >> 3;}
+unsigned char getRexB(instInfo* info) {return info->rexInfo & 0x01;}
+unsigned char getRexX(instInfo* info) {return (info->rexInfo & 0x02) >> 1;}
+unsigned char getRexR(instInfo*  info) {return (info->rexInfo & 0x04) >> 2;}
+unsigned char getRexW(instInfo* info) {return (info->rexInfo & 0x08) >> 3;}
 
 void setRexByte(instInfo* info, unsigned char rexByte) {info->rexInfo = (rexByte & 0x0F);}
 
@@ -195,8 +195,13 @@ char queryVEXTables(unsigned char opByte, unsigned char mapSelect){
 
 }
 
-unsigned char getXOPVEXR(instInfo * info){return (info->xopVexInfo & 0x10) >> 4;}
-unsigned char getXOPVEXB(instInfo * info){return (info->xopVexInfo & 0x04) >> 2;}
+unsigned char getXOPVEXR(instInfo* info){return (info->xopVexInfo & 0x10) >> 4;}
+unsigned char getXOPVEXB(instInfo* info){return (info->xopVexInfo & 0x04) >> 2;}
+unsigned char getXOPVEXQuadV(instInfo* info)(
+
+unsigned char getXOPVEXQuadV(instInfo* info){return ( info->xopVexInfo & 0x0F00) >> 8;}
+//xop/vex vvvv field is encoded in inverted one's complement form.
+unsigned char getXOPVEXQuadVReal(instInfo* info){return ~getXOPVEXQuadV(info);}
 
 
 char parseXOPVEXSequence(unsigned char isXOP, unsigned char isThreeByte, unsigned char* currentPos, instInfo* info){
@@ -320,27 +325,27 @@ char secondaryPrefixFSM(unsigned char * currentPos, instInfo* info){
 
 
 unsigned char getModMod(unsigned char byte){return (0xC0 &byte) >> 6; }
+
 unsigned char getModReg(unsigned char byte){return (0x38 & byte) >> 3;}
-unsigned char getModRm(unsigned char byte){return (0x07 & byte);}
+unsigned char getModRegFull(unsigned char byte, instInfo* info){
 
-
-char parseModRMByte(unsigned char byte, instInfo* info){
-
-
-	unsigned char modMod = getModMod(byte);
 	unsigned char modReg = getModReg(byte);
-	unsigned char modRm = getModRm(byte);
-	
+	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended.
 	unsigned char regExtension = getRexR(info) || !getXOPVEXR(info);
 	unsigned char fullReg = (regExtension << 3) || modReg;
-	
+	return fullReg;
+}
+
+unsigned char getModRm(unsigned char byte){return (0x07 & byte);}
+unsigned char getModRMFull(unsigned char byte, instInfo* info){
+
+	unsigned char modRm = getModRm(byte);
+	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended.
 	unsigned rmExtension = getRexB(info) || !getXOPVEXB(info);
 	unsigned char fullRm = (rmExtension << 3) || modRm;
-
-
-
-
+	return fullRm;
 }
+
 
 
 unsigned char getSIBScale(unsigned char byte){return (0xC0 &byte) >> 6; }
