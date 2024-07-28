@@ -8,3 +8,5 @@
 #define debug 7
 
 int getRegisterArrayIndex(unsigned char regVal, unsigned char regType, unsigned char regSize);
+void loadNonRexRegisters(char ** registers);
+void loadRexRegisters(char ** registers);
