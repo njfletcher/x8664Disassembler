@@ -15,6 +15,8 @@
 #define repezPre 0xF3//repe or repz
 #define repnezPre 0xF2 // repne or repnz
 
+#define modDirect = 0x3
+
 
 typedef struct instructionInfo{
 
