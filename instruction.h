@@ -88,9 +88,18 @@ unsigned char getModRm(unsigned char byte);
 unsigned char getModRMFull(unsigned char byte, instInfo* info)
 
 unsigned char getSIBScale(unsigned char byte);
+char getSIBScaleChar(unsigned char scale);
 unsigned char getSIBIndex(unsigned char byte);
+unsigned char getSIBIndexFull(unsigned char byte);
 unsigned char getSIBBase(unsigned char byte);
-char parseSIBByte(unsigned char byte, instInfo* info);
+unsigned char getSIBBaseFull(unsigned char byte);
+
+
+
+void getSIBOperand(unsigned char modValue, unsigned char sibByte, char * buffer);
+
+
+
 
 
 

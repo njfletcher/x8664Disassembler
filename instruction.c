@@ -1,4 +1,6 @@
 #include "instruction.h"
+#include <string.h>
+#include <math.h>
 
 char getOpSizeInfo(instInfo* info) {return (info->legPreInfo & 0x01);}
 char getAddrSizeInfo(instInfo* info) {return ((info->legPreInfo & 0x02) >> 1);}
@@ -330,7 +332,7 @@ unsigned char getModReg(unsigned char byte){return (0x38 & byte) >> 3;}
 unsigned char getModRegFull(unsigned char byte, instInfo* info){
 
 	unsigned char modReg = getModReg(byte);
-	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended.
+	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
 	unsigned char regExtension = getRexR(info) || !getXOPVEXR(info);
 	unsigned char fullReg = (regExtension << 3) || modReg;
 	return fullReg;
@@ -340,8 +342,8 @@ unsigned char getModRm(unsigned char byte){return (0x07 & byte);}
 unsigned char getModRMFull(unsigned char byte, instInfo* info){
 
 	unsigned char modRm = getModRm(byte);
-	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended.
-	unsigned rmExtension = getRexB(info) || !getXOPVEXB(info);
+	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
+	unsigned char rmExtension = getRexB(info) || !getXOPVEXB(info);
 	unsigned char fullRm = (rmExtension << 3) || modRm;
 	return fullRm;
 }
@@ -349,28 +351,215 @@ unsigned char getModRMFull(unsigned char byte, instInfo* info){
 
 
 unsigned char getSIBScale(unsigned char byte){return (0xC0 &byte) >> 6; }
+
+char  getSIBScaleChar(unsigned char scale){
+
+
+	int convertedNum = pow(2, scale);
+	return convertedNum + 48//ascii val of '0'
+		
+}
+
 unsigned char getSIBIndex(unsigned char byte){return (0x38 & byte) >> 3;}
+unsigned char getSIBIndexFull(unsigned char byte){
+
+	unsigned char index = getSIBIndex(byte);
+	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
+	unsigned char indExtension = getRexX(info);
+	unsigned char fullIndex = (indExtension << 3) || index
+	return fullIndex;
+
+}
+
 unsigned char getSIBBase(unsigned char byte){return (0x07 & byte);}
+unsigned char getSIBBaseFull(unsigned char byte){
+
+	unsigned char base = getSIBBase(byte);
+	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
+	unsigned char baseExtension = getRexB(info);
+	unsigned char fullBase = (baseExtension << 3) || base
+	return fullBase;
+
+}
 
 
-char parseSIBByte(unsigned char byte, instInfo* info){
+//modrm either encodes a direct register operand, or some kind of indirect memory operand.
+//register is either found in the mod.reg field, or mod.rm field.
+//currByte should be positioned at mod byte, with possibility of looking forward one to the SIB byte if needed.
+char * getModRMOperand(unsigned char isDirect, unsigned char regType, unsigned char regSize, unsigned char isFromRM, unsigned char * currByte, instInfo* info){
 
-
-	unsigned char sibScale = getSIBScale(byte);
-	unsigned char sibIndex = getSIBIndex(byte);
-	unsigned char sibBase = getSIBBase(byte);
+	unsigned char byte = *currByte;
 	
-	unsigned char indexExtension = getRexX(info);
-	unsigned char fullIndex = (indexExtension << 3) || sibIndex;
+	if(isDirect){
+		
+		unsigned char regKey;
+		
+		if(isFromRM){
+			unsigned char modVal = getModMod(byte);
+			if(modVal != modDirect) return "-" //if direct register operand using rm field, mod.mod field must be 11b.
+			regKey = getModRMFull(byte, info);
+		}
+		else regKey = getModRegFull(byte, info); 
+		
+		
+		return registers[getRegisterArrayIndex(regKey, regType, regSize)]
 	
-	unsigned baseExtension = getRexB(info);
-	unsigned char fullBase = (baseExtension << 3) || sibBase;
+	}
+	else{
+	
+		unsigned char modVal = getModMod(byte);
+		if(modVal == modDirect) return "-" //if memory operand mod.mod field must not be 11b.
+		
+		
+	
+	
+	
+	}
 
 
 
 
 }
 
+
+//models the SIB tables found at https://wiki.osdev.org/X86-64_Instruction_Encoding
+//output stored in buffer, make sure it has room! good amount is probably 15 chars.
+void getSIBOperand(unsigned char modValue, unsigned char sibByte, char * buffer){
+
+	
+	unsigned char scale =  getSIBScale(sibByte);
+	unsigned char index = getSIBIndexFull(sibByte);
+	unsigned char base = getSIBBaseFull(sibByte);
+	
+	
+	char * baseReg = registers[getRegisterArrayIndex(base, genPurpose, 3)] // confirm this size!
+	char * indexReg = registers[getRegisterArrayIndex(index, genPurpose, 3)]// confirm this size!
+	
+	char scaleString[2] = {getSIBScaleChar(scale), 0};
+	
+	switch(modValue){
+	
+	
+		case 0x0:
+		
+			if(base != 5 && base != 13){
+			
+				if(index == 4){
+				
+					strcpy(buffer, "[");
+					strcat(buffer, baseReg);
+					strcat(buffer,"]");
+				
+				}
+				else{
+					
+					strcpy(buffer, "[");
+					strcat(buffer, baseReg);
+					strcat(buffer, " + (");
+					strcat(buffer, indexReg);
+					strcat(buffer, " * ");
+					strcat(buffer, scaleString);
+					strcat(buffer,")]");
+				
+				}
+			
+			
+			}
+			else{
+				char * disp32; // = getDisp32;
+				
+				if(index == 4){
+				
+					strcpy(buffer, "[");
+					strcat(buffer, disp32);
+					strcat(buffer,"]");
+				
+				}
+				else{
+					
+					strcpy(buffer, "[");
+					strcat(buffer, " + (");
+					strcat(buffer, indexReg);
+					strcat(buffer, " * ");
+					strcat(buffer, scaleString);
+					strcat(buffer, ") + ");
+					strcat(buffer, disp32);
+					strcat(buffer,"]");
+				
+				}
+			
+			
+			
+			
+			}
+			break;
+			
+		case 0x1:
+		
+			char * disp8; // = getDisp8;
+			
+			if(index == 4){
+			
+				strcpy(buffer, "[");
+				strcat(buffer, baseReg);
+				strcat(buffer," + ");
+				strcat(buffer,disp8);
+				strcat(buffer,"]");
+
+			}
+			else{
+			
+				strcpy(buffer, "[");
+				strcat(buffer, baseReg);
+				strcat(buffer, " + (");
+				strcat(buffer, indexReg);
+				strcat(buffer, " * ");
+				strcat(buffer, scaleString);
+				strcat(buffer,")");
+				strcat(buffer," + ");
+				strcat(buffer,disp8);
+				strcat(buffer,"]");
+				
+			}
+			
+			
+			
+		case 0x2:
+		
+			char * disp32; // = getDisp32;
+			
+			if(index == 4){
+			
+				strcpy(buffer, "[");
+				strcat(buffer, baseReg);
+				strcat(buffer," + ");
+				strcat(buffer,disp32);
+				strcat(buffer,"]");
+
+			}
+			else{
+			
+				strcpy(buffer, "[");
+				strcat(buffer, baseReg);
+				strcat(buffer, " + (");
+				strcat(buffer, indexReg);
+				strcat(buffer, " * ");
+				strcat(buffer, scaleString);
+				strcat(buffer,")");
+				strcat(buffer," + ");
+				strcat(buffer,disp32);
+				strcat(buffer,"]");
+				
+			}
+			
+	
+		
+	
+	}
+
+
+	
+}
 
 
 
