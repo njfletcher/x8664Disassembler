@@ -356,7 +356,7 @@ char  getSIBScaleChar(unsigned char scale){
 
 
 	int convertedNum = pow(2, scale);
-	return convertedNum + 48//ascii val of '0'
+	return convertedNum + 48;//ascii val of '0'
 		
 }
 
@@ -366,7 +366,7 @@ unsigned char getSIBIndexFull(unsigned char byte){
 	unsigned char index = getSIBIndex(byte);
 	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
 	unsigned char indExtension = getRexX(info);
-	unsigned char fullIndex = (indExtension << 3) || index
+	unsigned char fullIndex = (indExtension << 3) || index;
 	return fullIndex;
 
 }
@@ -377,63 +377,166 @@ unsigned char getSIBBaseFull(unsigned char byte){
 	unsigned char base = getSIBBase(byte);
 	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
 	unsigned char baseExtension = getRexB(info);
-	unsigned char fullBase = (baseExtension << 3) || base
+	unsigned char fullBase = (baseExtension << 3) || base;
 	return fullBase;
 
 }
 
 
-//modrm either encodes a direct register operand, or some kind of indirect memory operand.
-//register is either found in the mod.reg field, or mod.rm field.
-//currByte should be positioned at mod byte, with possibility of looking forward one to the SIB byte if needed.
-char * getModRMOperand(unsigned char isDirect, unsigned char regType, unsigned char regSize, unsigned char isFromRM, unsigned char * currByte, instInfo* info){
 
-	unsigned char byte = *currByte;
+//register is either found in the mod.reg field, or mod.rm field.
+//gets direct or memory operand from either reg or rm field, depending on which location is forced. Enforces mod.mod field rules(mod must be 11b when direct, not 11b when memory)
+char * getModRMOperandForced(unsigned char isDirectOperand, unsigned char regType, unsigned char regSize, unsigned char isFromRM, unsigned char * modBytePtr, instInfo* info){
+
+	unsigned char modByte = *modBytePtr;
+	unsigned char registerKey;
+	unsigned char modVal;
 	
-	if(isDirect){
-		
-		unsigned char regKey;
+	if(isDirectOperand){
+	
 		
 		if(isFromRM){
-			unsigned char modVal = getModMod(byte);
+			modVal = getModMod(modByte);
 			if(modVal != modDirect) return "-" //if direct register operand using rm field, mod.mod field must be 11b.
-			regKey = getModRMFull(byte, info);
-		}
-		else regKey = getModRegFull(byte, info); 
+			registerKey = getModRMFull(modByte, info);
+		}	
+		else registerKey = getModRegFull(modByte, info); 
 		
 		
-		return registers[getRegisterArrayIndex(regKey, regType, regSize)]
+		return registers[getRegisterArrayIndex(registerKey, regType, regSize)]
 	
 	}
 	else{
 	
-		unsigned char modVal = getModMod(byte);
-		if(modVal == modDirect) return "-" //if memory operand mod.mod field must not be 11b.
+		if(isFromRM){
+			modVal = getModMod(modByte);
+			if(modVal == modDirect) return "-" //if memory operand using rm field, mod.mod field must not be 11b.
+			return getModRMOperandUnforced(modBytePtr, regSize, regType, instInfo* info)
 		
+		}
+		else return "-"; //getting a memory operand from the mod.reg field is not allowed/defined.
+		
+	}
 		
 	
 	
+}
+
+//16 bit addressing
+getModMemoryOperand16Bit(unsigned char modVal, unsigned char * modBytePtr, instInfo* info){
+
+
+	unsigned char modByte = *modBytePtr;
+	unsigned char modRMUnExtended = getModRM(modByte, info);
+	unsigned char modRMExtended = getModRMFull(modByte, info);
+
+	char operandArr[8] = {"BX + SI","BX + DI","BP + SI","BP + DI","SI","DI","BP","BX"};
+	
+	switch(modVal){
+	
+		case 0x0:
+			if(modRmUnExtended == 0x6){
+			
+				return //getdisp16
+			}
+			else{
+				return operandArr[modRmUnExtended]);
+			}
+			
+		case 0x1:
+			return operandArr[modRmUnExtended];// + get disp 8
+			
+			
+			
+		case 0x2:
+			return operandArr[modRmUnExtended];// + get disp 16
+
+		
+	}
+	
+	return "";
+}
+
+
+//32 or 64 bit addressing
+getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, instInfo * info, unsigned char regSize){
+
+	unsigned char modByte = *modBytePtr;
+	unsigned char modRMUnExtended = getModRM(modByte, info);
+	unsigned char modRMExtended = getModRMFull(modByte, info);
+	
+	if(modVal == 0x0 && modRmUnExtended == 0x5){
+		
+		return //get rip + disp32	
+	}
+	
+	
+	if(modRmUnExtended == 4){
+	
+		return getSIBOperand(modVal, sibByte, char * buffer, (modBytePtr + 1));
 	
 	}
-
-
-
-
+	else{
+		//memory accesses using registers always use the general purpose regs.
+		return registers[getRegisterArrayIndex(modRMExtended, genPurpose, regSize)]; // + appropriate displacement
+	
+	}
+	
+	
+	
 }
+
+
+
+// get the register or memory operand based on the modRM byte. Unforced refers to the fact the modRm.mod field automatically determines if the operand is direct or memory based.
+getModRMOperandUnforced(unsigned char * modBytePtr, unsigned char regSize, unsigned char regType, instInfo* info){
+
+
+	unsigned char modByte = *modBytePtr;
+	unsigned char modVal = getModMod(modByte);
+	
+		
+	if(modVal == modDirect){
+		
+		unsigned char modRMExtended = getModRMFull(modByte, info);
+		return registers[getRegisterArrayIndex(modRMExtended, regType, regSize)];
+		
+	}
+	else{
+	
+		
+		if(regSize < 2){
+		
+			return getModMemoryOperand16Bit(modVal, modBytePtr, info);
+		
+		}
+		else{
+		
+			return getModMemoryOperandLong(modVal, modBytePtr, info, regSize);
+		
+		}
+		
+	
+	}
+	
+
+} 
 
 
 //models the SIB tables found at https://wiki.osdev.org/X86-64_Instruction_Encoding
 //output stored in buffer, make sure it has room! good amount is probably 15 chars.
-void getSIBOperand(unsigned char modValue, unsigned char sibByte, char * buffer){
+//sibBytePtr should be pointing to the sib byte, addresses after sib byte may point to displacement bytes.
+void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned char regSize, char * buffer){
 
 	
+	unsigned char sibByte = * sibBytePtr;
 	unsigned char scale =  getSIBScale(sibByte);
 	unsigned char index = getSIBIndexFull(sibByte);
 	unsigned char base = getSIBBaseFull(sibByte);
 	
 	
-	char * baseReg = registers[getRegisterArrayIndex(base, genPurpose, 3)] // confirm this size!
-	char * indexReg = registers[getRegisterArrayIndex(index, genPurpose, 3)]// confirm this size!
+	char * baseReg = registers[getRegisterArrayIndex(base, genPurpose, regSize)]; // confirm this size!
+	char * indexReg = registers[getRegisterArrayIndex(index, genPurpose, regSize)];// confirm this size!
 	
 	char scaleString[2] = {getSIBScaleChar(scale), 0};
 	
