@@ -29,7 +29,7 @@ char * operandD(unsigned char size, unsigned char * opByte, instInfo* info){
 char * operandE(unsigned char size, unsigned char * opByte, instInfo* info){
 
 	unsigned char byte = *(opByte +1);
-	unsigned char fullRm = getModRmFull(byte,info);
+	unsigned char fullRm = getModRMFull(byte,info);
 	
 	unsigned char mod = getModMod(byte);
 	//this operand specifies either a genPurpose register operand or memory operand. mod.mod field tells which one should be used.
@@ -59,7 +59,7 @@ char * operandH(unsigned char size, instInfo* info){
 char * operandM(unsigned char size, unsigned char * opByte, instInfo* info){
 
 	unsigned char byte = *(opByte +1);
-	unsigned char fullRm = getModRmFull(byte,info);
+	unsigned char fullRm = getModRMFull(byte,info);
 	unsigned char mod = getModMod(byte);
 	if(mod == modDirect) return "-"; // mod field must be not 11b in this operand
 	//operand of M implies a memory operand from the modrm field. memory operands from this field only use the gen purpose registers in the reg table.
@@ -70,7 +70,7 @@ char * operandM(unsigned char size, unsigned char * opByte, instInfo* info){
 char * operandN(unsigned char size, unsigned char * opByte, instInfo* info){
 
 	unsigned char byte = *(opByte +1);
-	unsigned char fullRm = getModRmFull(byte,info);	
+	unsigned char fullRm = getModRMFull(byte,info);	
 	unsigned char mod = getModMod(byte);
 	if(mod != modDirect) return "-"; // mod field must be 11b in this operand
 	//operand of N implies mmx register, size is provided(although size should always be 0 since mmx type registers are only 64 bit).
@@ -88,7 +88,7 @@ char * operandP(unsigned char size, unsigned char * opByte, instInfo* info){
 char * operandQ(unsigned char size, unsigned char * opByte, instInfo* info){
 
 	unsigned char byte = *(opByte +1);
-	unsigned char fullRm = getModRmFull(byte,info);
+	unsigned char fullRm = getModRMFull(byte,info);
 	unsigned char mod = getModMod(byte);
 	//this operand specifies either an mmx register operand or memory operand. mod.mod field tells which one should be used.
 	if(mod == modDirect){
@@ -102,7 +102,7 @@ char * operandQ(unsigned char size, unsigned char * opByte, instInfo* info){
 char * operandR(unsigned char size, unsigned char * opByte, instInfo* info){
 
 	unsigned char byte = *(opByte +1);
-	unsigned char fullRm = getModRmFull(byte,info);
+	unsigned char fullRm = getModRMFull(byte,info);
 	unsigned char mod = getModMod(byte);
 	if(mod != modDirect) return "-"; // mod field must be 11b in this operand
 	//operand of R implies general purpose register
@@ -120,7 +120,7 @@ char * operandS(unsigned char size, unsigned char * opByte, instInfo* info){
 char * operandU(unsigned char size, unsigned char * opByte, instInfo* info){
 
 	unsigned char byte = *(opByte +1);
-	unsigned char fullRm = getModRmFull(byte,info);
+	unsigned char fullRm = getModRMFull(byte,info);
 	unsigned char mod = getModMod(byte);
 	if(mod != modDirect) return "-"; // mod field must be 11b in this operand
 	//operand of U implies xmm or ymm register(not sure which yet)
@@ -138,7 +138,7 @@ char * operandV(unsigned char size, unsigned char * opByte, instInfo* info){
 char * operandW(unsigned char size, unsigned char * opByte, instInfo* info){
 
 	unsigned char byte = *(opByte +1);
-	unsigned char fullRm = getModRmFull(byte,info);
+	unsigned char fullRm = getModRMFull(byte,info);
 	unsigned char mod = getModMod(byte);
 	//this operand specifies either an xmm/ymm register operand or memory operand. mod.mod field tells which one should be used.
 	if(mod == modDirect){

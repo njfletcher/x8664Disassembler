@@ -83,23 +83,25 @@ unsigned char getXOPVEXQuadVReal(instInfo* info);
 char secondaryPrefixFSM(unsigned char * currentPos, instInfo* info);
 
 
-
 unsigned char getModMod(unsigned char byte);
 unsigned char getModReg(unsigned char byte);
 unsigned char getModRegFull(unsigned char byte, instInfo* info);
-unsigned char getModRm(unsigned char byte);
+unsigned char getModRM(unsigned char byte);
 unsigned char getModRMFull(unsigned char byte, instInfo* info);
 
 unsigned char getSIBScale(unsigned char byte);
 char getSIBScaleChar(unsigned char scale);
 unsigned char getSIBIndex(unsigned char byte);
-unsigned char getSIBIndexFull(unsigned char byte);
+unsigned char getSIBIndexFull(unsigned char byte, instInfo* info);
 unsigned char getSIBBase(unsigned char byte);
-unsigned char getSIBBaseFull(unsigned char byte);
+unsigned char getSIBBaseFull(unsigned char byte, instInfo* info);
 
+void getModRMOperandForced(unsigned char isDirectOperand, unsigned char regType, unsigned char regSize, unsigned char isFromRM, unsigned char * modBytePtr, instInfo* info, char * buffer);
+void getModMemoryOperand16Bit(unsigned char modVal, unsigned char * modBytePtr, instInfo* info, char * buffer);
+void getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, instInfo * info, unsigned char regSize, char * buffer);
+void getModRMOperandUnforced(unsigned char * modBytePtr, unsigned char regSize, unsigned char regType, instInfo* info, char * buffer);
+void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned char regSize, instInfo* info, char * buffer);
 
-
-void getSIBOperand(unsigned char modValue, unsigned char sibByte, char * buffer);
 
 
 

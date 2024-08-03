@@ -1,6 +1,8 @@
 #include "instruction.h"
 #include <string.h>
 #include <math.h>
+#include "register.h"
+#include <stdlib.h>
 
 char getOpSizeInfo(instInfo* info) {return (info->legPreInfo & 0x01);}
 char getAddrSizeInfo(instInfo* info) {return ((info->legPreInfo & 0x02) >> 1);}
@@ -28,48 +30,48 @@ char legacyPrefixFSM(unsigned char* instructionCandidate, instInfo* info){
 		switch(currByte){
 		
 			case opSizePre:
-				morePrefixesPossible = !getOpSizeInfo(*info);
+				morePrefixesPossible = !getOpSizeInfo(info);
 				setOpSizeInfo(info,1);
 				break;
 			case addrSizePre:
-				morePrefixesPossible = !getAddrSizeInfo(*info);
+				morePrefixesPossible = !getAddrSizeInfo(info);
 				setAddrSizeInfo(info,1);
 				break;
 			case segCSPre:
-				morePrefixesPossible = !getSegmentInfo(*info);
+				morePrefixesPossible = !getSegmentInfo(info);
 				setSegmentInfo(info,1);
 				break;
 			case segDSPre:
-				morePrefixesPossible = !getSegmentInfo(*info);
+				morePrefixesPossible = !getSegmentInfo(info);
 				setSegmentInfo(info,2);
 				break;
 			case segESPre:
-				morePrefixesPossible = !getSegmentInfo(*info);
+				morePrefixesPossible = !getSegmentInfo(info);
 				setSegmentInfo(info,3);
 				break;
 			case segFSPre:
-				morePrefixesPossible = !getSegmentInfo(*info);
+				morePrefixesPossible = !getSegmentInfo(info);
 				setSegmentInfo(info,4);
 				break;
 			case segGSPre:
-				morePrefixesPossible = !getSegmentInfo(*info);
+				morePrefixesPossible = !getSegmentInfo(info);
 				setSegmentInfo(info,5);
 				break;
 			case segSSPre:
-				morePrefixesPossible = !getSegmentInfo(*info);
+				morePrefixesPossible = !getSegmentInfo(info);
 				setSegmentInfo(info,6);
 				break;
 			case lockPre:
 				//lock is mutually exclusive with repeaters
-				morePrefixesPossible = !getLockInfo(*info) || !getRepInfo(*info);
+				morePrefixesPossible = !getLockInfo(info) || !getRepInfo(info);
 				setLockInfo(info,1);
 				break;
 			case repPre:
-				morePrefixesPossible = !getRepInfo(*info) || !getLockInfo(*info);
+				morePrefixesPossible = !getRepInfo(info) || !getLockInfo(info);
 				setRepInfo(info, 1);
 				break;
 			case repnezPre:
-				morePrefixesPossible = !getRepInfo(*info) || !getLockInfo(*info);
+				morePrefixesPossible = !getRepInfo(info) || !getLockInfo(info);
 				setRepInfo(info, 2);
 				break;
 			default:
@@ -359,7 +361,7 @@ char  getSIBScaleChar(unsigned char scale){
 }
 
 unsigned char getSIBIndex(unsigned char byte){return (0x38 & byte) >> 3;}
-unsigned char getSIBIndexFull(unsigned char byte){
+unsigned char getSIBIndexFull(unsigned char byte, instInfo * info){
 
 	unsigned char index = getSIBIndex(byte);
 	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
@@ -370,7 +372,7 @@ unsigned char getSIBIndexFull(unsigned char byte){
 }
 
 unsigned char getSIBBase(unsigned char byte){return (0x07 & byte);}
-unsigned char getSIBBaseFull(unsigned char byte){
+unsigned char getSIBBaseFull(unsigned char byte, instInfo * info){
 
 	unsigned char base = getSIBBase(byte);
 	//need to add logic to check if correct circumstancess are present for extension: doesnt always get extended. only 64 bit mode
@@ -384,7 +386,7 @@ unsigned char getSIBBaseFull(unsigned char byte){
 
 //register is either found in the mod.reg field, or mod.rm field.
 //gets direct or memory operand from either reg or rm field, depending on which location is forced. Enforces mod.mod field rules(mod must be 11b when direct, not 11b when memory)
-char * getModRMOperandForced(unsigned char isDirectOperand, unsigned char regType, unsigned char regSize, unsigned char isFromRM, unsigned char * modBytePtr, instInfo* info){
+void getModRMOperandForced(unsigned char isDirectOperand, unsigned char regType, unsigned char regSize, unsigned char isFromRM, unsigned char * modBytePtr, instInfo* info, char * buffer){
 
 	unsigned char modByte = *modBytePtr;
 	unsigned char registerKey;
@@ -392,27 +394,25 @@ char * getModRMOperandForced(unsigned char isDirectOperand, unsigned char regTyp
 	
 	if(isDirectOperand){
 	
-		
 		if(isFromRM){
 			modVal = getModMod(modByte);
-			if(modVal != modDirect) return "-" //if direct register operand using rm field, mod.mod field must be 11b.
+			if(modVal != modDirect) strcpy(buffer, "-"); //if direct register operand using rm field, mod.mod field must be 11b.
 			registerKey = getModRMFull(modByte, info);
 		}	
 		else registerKey = getModRegFull(modByte, info); 
 		
-		
-		return registers[getRegisterArrayIndex(registerKey, regType, regSize)]
+		strcpy(buffer, registers[getRegisterArrayIndex(registerKey, regType, regSize)]);
 	
 	}
 	else{
 	
 		if(isFromRM){
 			modVal = getModMod(modByte);
-			if(modVal == modDirect) return "-" //if memory operand using rm field, mod.mod field must not be 11b.
-			return getModRMOperandUnforced(modBytePtr, regSize, regType, instInfo* info)
+			if(modVal == modDirect) strcpy(buffer, "-");//if memory operand using rm field, mod.mod field must not be 11b.
+			else getModRMOperandUnforced(modBytePtr, regSize, regType, info, buffer);
 		
 		}
-		else return "-"; //getting a memory operand from the mod.reg field is not allowed/defined.
+		else strcpy(buffer, "-"); //getting a memory operand from the mod.reg field is not allowed/defined.
 		
 	}
 		
@@ -421,62 +421,69 @@ char * getModRMOperandForced(unsigned char isDirectOperand, unsigned char regTyp
 }
 
 //16 bit addressing
-getModMemoryOperand16Bit(unsigned char modVal, unsigned char * modBytePtr, instInfo* info){
+void getModMemoryOperand16Bit(unsigned char modVal, unsigned char * modBytePtr, instInfo* info, char * buffer){
 
 
 	unsigned char modByte = *modBytePtr;
-	unsigned char modRMUnExtended = getModRM(modByte, info);
+	unsigned char modRMUnExtended = getModRM(modByte);
 	unsigned char modRMExtended = getModRMFull(modByte, info);
 
-	char operandArr[8] = {"BX + SI","BX + DI","BP + SI","BP + DI","SI","DI","BP","BX"};
+	char* operandArr[8] = {"BX + SI","BX + DI","BP + SI","BP + DI","SI","DI","BP","BX"};
+	
+	
+	strcpy(buffer,"[");
 	
 	switch(modVal){
 	
 		case 0x0:
-			if(modRmUnExtended == 0x6){
+			if(modRMUnExtended == 0x6){
 			
-				return //getdisp16
+				//getdisp16
 			}
 			else{
-				return operandArr[modRmUnExtended]);
+				strcat(buffer,operandArr[modRMUnExtended]);
 			}
 			
+			break;
 		case 0x1:
-			return operandArr[modRmUnExtended];// + get disp 8
-			
+			strcat(buffer,operandArr[modRMUnExtended]);// + get disp 8
+			break;
 			
 			
 		case 0x2:
-			return operandArr[modRmUnExtended];// + get disp 16
+			strcat(buffer, operandArr[modRMUnExtended]);// + get disp 16
+			break;
 
 		
 	}
-	
-	return "";
+	strcat(buffer,"]");
+
 }
 
 
 //32 or 64 bit addressing
-getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, instInfo * info, unsigned char regSize){
+void getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, instInfo * info, unsigned char regSize, char * buffer){
 
 	unsigned char modByte = *modBytePtr;
-	unsigned char modRMUnExtended = getModRM(modByte, info);
+	unsigned char modRMUnExtended = getModRM(modByte);
 	unsigned char modRMExtended = getModRMFull(modByte, info);
 	
-	if(modVal == 0x0 && modRmUnExtended == 0x5){
+	if(modVal == 0x0 && modRMUnExtended == 0x5){
 		
-		return //get rip + disp32	
+		//get rip + disp32	
 	}
 	
 	
-	if(modRmUnExtended == 4){
+	if(modRMUnExtended == 4){
 	
-		return getSIBOperand(modVal, sibByte, char * buffer, (modBytePtr + 1));
+		getSIBOperand((modBytePtr + 1), modVal, regSize, info, buffer);
 	
 	}
 	else{
 		//memory accesses using registers always use the general purpose regs.
-		return registers[getRegisterArrayIndex(modRMExtended, genPurpose, regSize)]; // + appropriate displacement
+		strcpy(buffer,"[");
+		strcat(buffer,registers[getRegisterArrayIndex(modRMExtended, genPurpose, regSize)]); // + appropriate displacement
+		strcat(buffer,"]");
 	
 	}
 	
@@ -487,83 +494,63 @@ getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, instIn
 
 
 // get the register or memory operand based on the modRM byte. Unforced refers to the fact the modRm.mod field automatically determines if the operand is direct or memory based.
-getModRMOperandUnforced(unsigned char * modBytePtr, unsigned char regSize, unsigned char regType, instInfo* info){
+void getModRMOperandUnforced(unsigned char * modBytePtr, unsigned char regSize, unsigned char regType, instInfo* info, char * buffer){
 
 
 	unsigned char modByte = *modBytePtr;
 	unsigned char modVal = getModMod(modByte);
-	
 		
 	if(modVal == modDirect){
 		
 		unsigned char modRMExtended = getModRMFull(modByte, info);
-		return registers[getRegisterArrayIndex(modRMExtended, regType, regSize)];
-		
+		strcpy(buffer, registers[getRegisterArrayIndex(modRMExtended, regType, regSize)]);
 	}
 	else{
-	
 		
-		if(regSize < 2){
+		if(regSize < 2) getModMemoryOperand16Bit(modVal, modBytePtr, info, buffer);
+		else getModMemoryOperandLong(modVal, modBytePtr, info, regSize, buffer);
 		
-			return getModMemoryOperand16Bit(modVal, modBytePtr, info);
-		
-		}
-		else{
-		
-			return getModMemoryOperandLong(modVal, modBytePtr, info, regSize);
-		
-		}
-		
-	
+
 	}
 	
-
 } 
 
 
 //models the SIB tables found at https://wiki.osdev.org/X86-64_Instruction_Encoding
 //output stored in buffer, make sure it has room! good amount is probably 15 chars.
 //sibBytePtr should be pointing to the sib byte, addresses after sib byte may point to displacement bytes.
-void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned char regSize, char * buffer){
+void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned char regSize, instInfo* info, char * buffer){
 
 	
-	unsigned char sibByte = * sibBytePtr;
+	unsigned char sibByte = *sibBytePtr;
 	unsigned char scale =  getSIBScale(sibByte);
-	unsigned char index = getSIBIndexFull(sibByte);
-	unsigned char base = getSIBBaseFull(sibByte);
-	
+	unsigned char index = getSIBIndexFull(sibByte,info);
+	unsigned char base = getSIBBaseFull(sibByte, info);
+	unsigned char baseShort = getSIBBase(sibByte);
 	
 	char * baseReg = registers[getRegisterArrayIndex(base, genPurpose, regSize)]; // confirm this size!
 	char * indexReg = registers[getRegisterArrayIndex(index, genPurpose, regSize)];// confirm this size!
 	
 	char scaleString[2] = {getSIBScaleChar(scale), 0};
 	
+	strcpy(buffer, "[");
+	
 	switch(modValue){
 	
 	
 		case 0x0:
 		
-			if(base != 5 && base != 13){
+			if(baseShort != 5){
 			
-				if(index == 4){
-				
-					strcpy(buffer, "[");
-					strcat(buffer, baseReg);
-					strcat(buffer,"]");
-				
-				}
+				if(index == 4) strcat(buffer, baseReg);
 				else{
-					
-					strcpy(buffer, "[");
 					strcat(buffer, baseReg);
 					strcat(buffer, " + (");
 					strcat(buffer, indexReg);
 					strcat(buffer, " * ");
 					strcat(buffer, scaleString);
-					strcat(buffer,")]");
-				
+					strcat(buffer,")");
 				}
-			
 			
 			}
 			else{
@@ -571,27 +558,19 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 				
 				if(index == 4){
 				
-					strcpy(buffer, "[");
 					strcat(buffer, disp32);
-					strcat(buffer,"]");
 				
 				}
 				else{
-					
-					strcpy(buffer, "[");
-					strcat(buffer, " + (");
+
+					strcat(buffer, "(");
 					strcat(buffer, indexReg);
 					strcat(buffer, " * ");
 					strcat(buffer, scaleString);
 					strcat(buffer, ") + ");
 					strcat(buffer, disp32);
-					strcat(buffer,"]");
-				
 				}
-			
-			
-			
-			
+
 			}
 			break;
 			
@@ -601,16 +580,12 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 			
 			if(index == 4){
 			
-				strcpy(buffer, "[");
 				strcat(buffer, baseReg);
 				strcat(buffer," + ");
 				strcat(buffer,disp8);
-				strcat(buffer,"]");
-
 			}
 			else{
-			
-				strcpy(buffer, "[");
+
 				strcat(buffer, baseReg);
 				strcat(buffer, " + (");
 				strcat(buffer, indexReg);
@@ -619,28 +594,24 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 				strcat(buffer,")");
 				strcat(buffer," + ");
 				strcat(buffer,disp8);
-				strcat(buffer,"]");
 				
 			}
 			
-			
+			break;
 			
 		case 0x2:
 		
 			char * disp32; // = getDisp32;
 			
 			if(index == 4){
-			
-				strcpy(buffer, "[");
+
 				strcat(buffer, baseReg);
 				strcat(buffer," + ");
 				strcat(buffer,disp32);
-				strcat(buffer,"]");
 
 			}
 			else{
-			
-				strcpy(buffer, "[");
+
 				strcat(buffer, baseReg);
 				strcat(buffer, " + (");
 				strcat(buffer, indexReg);
@@ -649,16 +620,14 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 				strcat(buffer,")");
 				strcat(buffer," + ");
 				strcat(buffer,disp32);
-				strcat(buffer,"]");
-				
 			}
 			
-	
+			break;
 		
 	
 	}
 
-
+	strcat(buffer,"]");
 	
 }
 
