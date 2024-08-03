@@ -3,6 +3,7 @@
 #include <math.h>
 #include "register.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 char getOpSizeInfo(instInfo* info) {return (info->legPreInfo & 0x01);}
 char getAddrSizeInfo(instInfo* info) {return ((info->legPreInfo & 0x02) >> 1);}
@@ -629,6 +630,40 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 
 	strcat(buffer,"]");
 	
+}
+
+
+//used for immediate or displacement value reading
+//immediate/displacement values are powers of 2 up to the value 8(only allowed in 64 bit).
+char * getNextBytesAsString(void * currBytePtr, unsigned char scale){
+
+	
+	if(scale >= 4) return NULL;
+	long long int number = 0;
+	
+	switch(scale){
+	
+		case 0:
+			number = *((char * ) currBytePtr);
+			break;
+		case 1:
+			number = *((short int *) currBytePtr);
+			break;
+		case 2:
+			number = *((int *) currBytePtr);
+			break;
+		case 3:
+			number = *((long long int *) currBytePtr);
+			break;
+	}
+	
+	int length = snprintf( NULL, 0, "%lli", number);
+	char* str = malloc( length + 1 );
+	snprintf( str, length + 1, "%lli", number );
+	
+	return str;
+	
+
 }
 
 

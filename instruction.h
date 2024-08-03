@@ -102,6 +102,8 @@ void getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, i
 void getModRMOperandUnforced(unsigned char * modBytePtr, unsigned char regSize, unsigned char regType, instInfo* info, char * buffer);
 void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned char regSize, instInfo* info, char * buffer);
 
+char * getNextBytesAsString(void * currBytePtr, unsigned char scale);
+
 
 
 
