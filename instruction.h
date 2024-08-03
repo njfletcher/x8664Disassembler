@@ -1,3 +1,6 @@
+#ifndef instruction
+#define instruction
+
 
 #define maxInstructionLength 15 //bytes
 #define illegalInstructionNum -1
@@ -15,7 +18,7 @@
 #define repezPre 0xF3//repe or repz
 #define repnezPre 0xF2 // repne or repnz
 
-#define modDirect = 0x3
+#define modDirect 0x3
 
 
 typedef struct instructionInfo{
@@ -83,9 +86,9 @@ char secondaryPrefixFSM(unsigned char * currentPos, instInfo* info);
 
 unsigned char getModMod(unsigned char byte);
 unsigned char getModReg(unsigned char byte);
-unsigned char getModRegFull(unsigned char byte, instInfo* info)
+unsigned char getModRegFull(unsigned char byte, instInfo* info);
 unsigned char getModRm(unsigned char byte);
-unsigned char getModRMFull(unsigned char byte, instInfo* info)
+unsigned char getModRMFull(unsigned char byte, instInfo* info);
 
 unsigned char getSIBScale(unsigned char byte);
 char getSIBScaleChar(unsigned char scale);
@@ -103,5 +106,5 @@ void getSIBOperand(unsigned char modValue, unsigned char sibByte, char * buffer)
 
 
 
-
+#endif
 

@@ -30,7 +30,7 @@ int getRegisterArrayIndex(unsigned char regVal, unsigned char regType, unsigned 
 	if(regVal >= 16 || regType >= 8 || regSize >= 5){
 		return -1;
 	}
-	unsigned char baseIndex = regVal * 15;
+	unsigned char baseIndex = regVal * 16;
 	unsigned char rowStartIndex = 0;
 	switch(regType){
 	
@@ -58,7 +58,7 @@ int getRegisterArrayIndex(unsigned char regVal, unsigned char regType, unsigned 
 		case debug:
 			rowStartIndex = 10;
 			break;
-		case default:
+		default:
 			return -1;
 
 	}

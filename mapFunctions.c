@@ -1,7 +1,6 @@
-#include "mapFunctions.c"
 #include "instruction.h"
 #include "register.h"
-
+#include "mapFunctions.h"
 
 char * operandB(unsigned char size, instInfo* info){
 

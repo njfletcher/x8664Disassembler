@@ -199,8 +199,6 @@ char queryVEXTables(unsigned char opByte, unsigned char mapSelect){
 
 unsigned char getXOPVEXR(instInfo* info){return (info->xopVexInfo & 0x10) >> 4;}
 unsigned char getXOPVEXB(instInfo* info){return (info->xopVexInfo & 0x04) >> 2;}
-unsigned char getXOPVEXQuadV(instInfo* info)(
-
 unsigned char getXOPVEXQuadV(instInfo* info){return ( info->xopVexInfo & 0x0F00) >> 8;}
 //xop/vex vvvv field is encoded in inverted one's complement form.
 unsigned char getXOPVEXQuadVReal(instInfo* info){return ~getXOPVEXQuadV(info);}

@@ -1,3 +1,6 @@
+#ifndef register
+#define register
+
 #define genPurpose 0
 #define x87 1
 #define mmx 2
@@ -7,6 +10,9 @@
 #define control 6
 #define debug 7
 
+
 int getRegisterArrayIndex(unsigned char regVal, unsigned char regType, unsigned char regSize);
 void loadNonRexRegisters(char ** registers);
 void loadRexRegisters(char ** registers);
+
+#endif
