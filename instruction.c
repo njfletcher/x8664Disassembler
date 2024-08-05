@@ -421,6 +421,40 @@ void getModRMOperandForced(unsigned char isDirectOperand, unsigned char regType,
 	
 }
 
+
+//used for immediate or displacement value reading
+//immediate/displacement values are powers of 2 up to the value 8(only allowed in 64 bit).
+char * getNextBytesAsString(void * currBytePtr, unsigned char scale){
+
+	
+	if(scale >= 4) return NULL;
+	long long int number = 0;
+	
+	switch(scale){
+	
+		case 0:
+			number = *((char * ) currBytePtr);
+			break;
+		case 1:
+			number = *((short int *) currBytePtr);
+			break;
+		case 2:
+			number = *((int *) currBytePtr);
+			break;
+		case 3:
+			number = *((long long int *) currBytePtr);
+			break;
+	}
+	
+	int length = snprintf( NULL, 0, "%lli", number);
+	char* str = malloc( length + 1 );
+	snprintf( str, length + 1, "%lli", number );
+	
+	return str;
+	
+
+}
+
 //16 bit addressing
 void getModMemoryOperand16Bit(unsigned char modVal, unsigned char * modBytePtr, instInfo* info, char * buffer){
 
@@ -439,7 +473,7 @@ void getModMemoryOperand16Bit(unsigned char modVal, unsigned char * modBytePtr, 
 		case 0x0:
 			if(modRMUnExtended == 0x6){
 			
-				//getdisp16
+				strcat(buffer,getNextBytesAsString(modBytePtr + 1, 1)); 
 			}
 			else{
 				strcat(buffer,operandArr[modRMUnExtended]);
@@ -447,12 +481,15 @@ void getModMemoryOperand16Bit(unsigned char modVal, unsigned char * modBytePtr, 
 			
 			break;
 		case 0x1:
-			strcat(buffer,operandArr[modRMUnExtended]);// + get disp 8
-			break;
+			strcat(buffer,operandArr[modRMUnExtended]);
+			strcat(buffer," + ");
+			strcat(buffer,getNextBytesAsString(modBytePtr + 1, 0)); 
 			
 			
 		case 0x2:
-			strcat(buffer, operandArr[modRMUnExtended]);// + get disp 16
+			strcat(buffer, operandArr[modRMUnExtended]);
+			strcat(buffer," + ");
+			strcat(buffer,getNextBytesAsString(modBytePtr + 1, 1)); 
 			break;
 
 		
@@ -472,6 +509,12 @@ void getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, i
 	if(modVal == 0x0 && modRMUnExtended == 0x5){
 		
 		//get rip + disp32	
+		strcpy(buffer,"[");
+		//cat rip
+		strcat(buffer," + ");
+		strcat(buffer,getNextBytesAsString(modBytePtr + 1, 2)); 
+		strcat(buffer,"]");
+		
 	}
 	
 	
@@ -483,7 +526,16 @@ void getModMemoryOperandLong(unsigned char modVal, unsigned char * modBytePtr, i
 	else{
 		//memory accesses using registers always use the general purpose regs.
 		strcpy(buffer,"[");
-		strcat(buffer,registers[getRegisterArrayIndex(modRMExtended, genPurpose, regSize)]); // + appropriate displacement
+		strcat(buffer,registers[getRegisterArrayIndex(modRMExtended, genPurpose, regSize)]);
+		if(modVal == 0x1){
+			strcat(buffer," + ");
+			strcat(buffer,getNextBytesAsString(modBytePtr + 1, 0)); 
+		}
+		else if(modVal == 0x2){
+			strcat(buffer," + ");
+			strcat(buffer,getNextBytesAsString(modBytePtr + 1, 2)); 
+		
+		}
 		strcat(buffer,"]");
 	
 	}
@@ -555,11 +607,11 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 			
 			}
 			else{
-				char * disp32; // = getDisp32;
 				
+				char * disp32 = getNextBytesAsString(sibBytePtr + 1, 2);
 				if(index == 4){
 				
-					strcat(buffer, disp32);
+					strcat(buffer,disp32);
 				
 				}
 				else{
@@ -577,7 +629,7 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 			
 		case 0x1:
 		
-			char * disp8; // = getDisp8;
+			char * disp8 = getNextBytesAsString(sibBytePtr + 1, 0);
 			
 			if(index == 4){
 			
@@ -602,7 +654,7 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 			
 		case 0x2:
 		
-			char * disp32; // = getDisp32;
+			char * disp32 = getNextBytesAsString(sibBytePtr + 1, 2);
 			
 			if(index == 4){
 
@@ -633,38 +685,7 @@ void getSIBOperand(unsigned char * sibBytePtr, unsigned char modValue, unsigned 
 }
 
 
-//used for immediate or displacement value reading
-//immediate/displacement values are powers of 2 up to the value 8(only allowed in 64 bit).
-char * getNextBytesAsString(void * currBytePtr, unsigned char scale){
 
-	
-	if(scale >= 4) return NULL;
-	long long int number = 0;
-	
-	switch(scale){
-	
-		case 0:
-			number = *((char * ) currBytePtr);
-			break;
-		case 1:
-			number = *((short int *) currBytePtr);
-			break;
-		case 2:
-			number = *((int *) currBytePtr);
-			break;
-		case 3:
-			number = *((long long int *) currBytePtr);
-			break;
-	}
-	
-	int length = snprintf( NULL, 0, "%lli", number);
-	char* str = malloc( length + 1 );
-	snprintf( str, length + 1, "%lli", number );
-	
-	return str;
-	
-
-}
 
 
 
